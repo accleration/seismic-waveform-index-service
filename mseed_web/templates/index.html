@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>数据截取工具</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            padding: 40px;
+            max-width: 600px;
+            width: 100%;
+        }
+
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 28px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #555;
+            font-weight: 500;
+            font-size: 14px;
+        }
+
+        input[type="text"],
+        input[type="date"],
+        input[type="time"] {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+
+        input[type="text"]:focus,
+        input[type="date"]:focus,
+        input[type="time"]:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
+        .submit-btn {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            margin-top: 10px;
+        }
+
+        .submit-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .submit-btn:active {
+            transform: translateY(0);
+        }
+
+        .alert {
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-size: 14px;
+        }
+
+        .alert-error {
+            background-color: #fee;
+            color: #c33;
+            border: 1px solid #fcc;
+        }
+
+        .alert-success {
+            background-color: #dfd;
+            color: #3c3;
+            border: 1px solid #cfc;
+        }
+
+        .loading-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 9999;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .loading-content {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            text-align: center;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .help-text {
+            font-size: 12px;
+            color: #888;
+            margin-top: 5px;
+        }
+
+        @media (max-width: 600px) {
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>数据截取工具</h1>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }}">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <form method="POST" action="/">
+            <div class="form-group">
+                <label for="net">网络代码 (net) *</label>
+                <input type="text" id="net" name="net" required placeholder="例如: SN">
+                <div class="help-text">台网代码</div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="sta">台站代码 (sta) *</label>
+                    <input type="text" id="sta" name="sta" required placeholder="例如: BAD">
+                    <div class="help-text">台站代码</div>
+                </div>
+
+                <div class="form-group">
+                    <label for="loc">位置代码 (loc) *</label>
+                    <input type="text" id="loc" name="loc" required placeholder="例如: 00">
+                    <div class="help-text">位置标识符</div>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="cha">通道代码 (cha) *</label>
+                <input type="text" id="cha" name="cha" required placeholder="例如: BHN">
+                <div class="help-text">通道代码（如 BHN, BHZ, BHE 等）</div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="start">开始时间 (start) *</label>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                        <input type="date" id="start_date" required>
+                        <input type="time" id="start_time" required step="1">
+                    </div>
+                    <input type="hidden" id="start" name="start">
+                    <div class="help-text">选择日期和时间，系统会自动格式化</div>
+                </div>
+
+                <div class="form-group">
+                    <label for="end">结束时间 (end) *</label>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                        <input type="date" id="end_date" required>
+                        <input type="time" id="end_time" required step="1">
+                    </div>
+                    <input type="hidden" id="end" name="end">
+                    <div class="help-text">选择日期和时间，系统会自动格式化</div>
+                </div>
+            </div>
+
+            <button type="submit" class="submit-btn" id="submitBtn">下载数据</button>
+        </form>
+
+        <!-- 加载提示遮罩 -->
+        <div class="loading-overlay" id="loadingOverlay">
+            <div class="loading-content">
+                <div class="spinner"></div>
+                <div style="font-size: 16px; color: #333; font-weight: 500;">正在下载数据，请稍候...</div>
+            </div>
+        </div>
+
+        <div style="text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #e0e0e0;">
+            <a href="{{ url_for('admin_login') }}" style="color: #999; font-size: 12px; text-decoration: none;">管理员入口</a>
+        </div>
+    </div>
+
+    <script>
+        // 将日期和时间格式化为API需要的格式
+        function formatDateTime(dateValue, timeValue) {
+            if (!dateValue || !timeValue) return '';
+            
+            // 日期格式已经是 YYYY-MM-DD
+            // 时间格式是 HH:MM 或 HH:MM:SS，需要确保有秒和毫秒
+            let timePart = timeValue;
+            
+            // 如果时间没有秒，添加 :00
+            if (timePart.split(':').length === 2) {
+                timePart += ':00';
+            }
+            
+            // 确保有毫秒部分
+            if (!timePart.includes('.')) {
+                timePart += '.000';
+            } else {
+                // 如果已经有毫秒但不足3位，补齐
+                const parts = timePart.split('.');
+                if (parts[1] && parts[1].length < 3) {
+                    timePart = parts[0] + '.' + parts[1].padEnd(3, '0');
+                } else if (!parts[1]) {
+                    timePart += '000';
+                }
+            }
+            
+            // 拼接为最终格式: YYYY-MM-DDTHH:MM:SS.sss
+            return dateValue + 'T' + timePart;
+        }
+        
+        // 更新隐藏的输入框值
+        function updateDateTimeInputs() {
+            const startDate = document.getElementById('start_date').value;
+            const startTime = document.getElementById('start_time').value;
+            const endDate = document.getElementById('end_date').value;
+            const endTime = document.getElementById('end_time').value;
+            
+            if (startDate && startTime) {
+                document.getElementById('start').value = formatDateTime(startDate, startTime);
+            }
+            
+            if (endDate && endTime) {
+                document.getElementById('end').value = formatDateTime(endDate, endTime);
+            }
+        }
+        
+        // 监听日期和时间输入变化
+        document.getElementById('start_date').addEventListener('change', updateDateTimeInputs);
+        document.getElementById('start_time').addEventListener('change', updateDateTimeInputs);
+        document.getElementById('end_date').addEventListener('change', updateDateTimeInputs);
+        document.getElementById('end_time').addEventListener('change', updateDateTimeInputs);
+        
+        // 表单提交前的验证和加载提示
+        document.querySelector('form').addEventListener('submit', function(e) {
+            // 先更新隐藏输入框的值
+            updateDateTimeInputs();
+            
+            const startInput = document.getElementById('start');
+            const endInput = document.getElementById('end');
+            
+            // 验证必填
+            if (!startInput.value || !endInput.value) {
+                e.preventDefault();
+                alert('请填写完整的开始时间和结束时间');
+                return false;
+            }
+            
+            // 验证时间格式
+            const timePattern = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}$/;
+            
+            if (!timePattern.test(startInput.value)) {
+                e.preventDefault();
+                alert('开始时间格式不正确，请重新选择');
+                document.getElementById('start_date').focus();
+                return false;
+            }
+            
+            if (!timePattern.test(endInput.value)) {
+                e.preventDefault();
+                alert('结束时间格式不正确，请重新选择');
+                document.getElementById('end_date').focus();
+                return false;
+            }
+            
+            // 验证结束时间晚于开始时间
+            const startTime = new Date(startInput.value);
+            const endTime = new Date(endInput.value);
+            
+            if (endTime <= startTime) {
+                e.preventDefault();
+                alert('结束时间必须晚于开始时间');
+                document.getElementById('end_date').focus();
+                return false;
+            }
+            
+            // 显示加载提示
+            document.getElementById('loadingOverlay').style.display = 'flex';
+            document.getElementById('submitBtn').disabled = true;
+            
+            // 使用隐藏的iframe来检测下载完成
+            // 当文件下载开始时，浏览器会触发下载，但页面不会刷新
+            // 我们设置一个超时来隐藏加载提示
+            setTimeout(function() {
+                const loadingOverlay = document.getElementById('loadingOverlay');
+                if (loadingOverlay && loadingOverlay.style.display === 'flex') {
+                    // 假设下载已开始（成功或失败都会刷新页面显示消息）
+                    // 如果5秒后还在显示，可能是下载成功但页面未刷新
+                    loadingOverlay.style.display = 'none';
+                    document.getElementById('submitBtn').disabled = false;
+                }
+            }, 3000);
+        });
+        
+        // 页面加载时隐藏加载提示
+        window.addEventListener('load', function() {
+            const loadingOverlay = document.getElementById('loadingOverlay');
+            if (loadingOverlay) {
+                loadingOverlay.style.display = 'none';
+            }
+            const submitBtn = document.getElementById('submitBtn');
+            if (submitBtn) {
+                submitBtn.disabled = false;
+            }
+        });
+    </script>
+</body>
+</html>
+

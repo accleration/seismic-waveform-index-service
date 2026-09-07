@@ -13,3 +13,8 @@ logs/
 # python
 __pycache__/
 *.py[cod]
+
+# runtime web data / secrets
+*.db
+.env
+

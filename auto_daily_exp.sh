@@ -6,26 +6,28 @@ set -e
 # =====================================================
 
 # 用户 home 目录
-USER_HOME="/home/ubuntu"
+USER_HOME="${USER_HOME:-$HOME}"
 
-# Miniseed 数据根目录
-SEISDATA_BASE="/mnt/mseedindex_share/seisdata"
+# MiniSEED 数据根目录
+SEISDATA_BASE="${SEISDATA_BASE:-/data/seisdata}"
 
 # mseedindex 项目目录
-MSEEDINDEX_DIR="$USER_HOME/project/mseedindex-main"
+MSEEDINDEX_DIR="${MSEEDINDEX_DIR:-$USER_HOME/project/mseedindex-main}"
 
-# 索引工程目录
-INDEX_PROJECT_DIR="$USER_HOME/project/exp-mseedindex-main"
+# 索引工程目录（本脚本运行目录）
+INDEX_PROJECT_DIR="${INDEX_PROJECT_DIR:-$USER_HOME/project/seismic-waveform-index}"
 
 # fdsnws_dataselect 工程目录
-FDSNWS_PROJECT_DIR="$USER_HOME/project/fdsnws_dataselect"
+FDSNWS_PROJECT_DIR="${FDSNWS_PROJECT_DIR:-$USER_HOME/project/fdsnws_dataselect}"
 
 # Conda 根目录与环境
-CONDA_ROOT="$USER_HOME/anaconda3"
-CONDA_ENV_NAME="ispaq"
+CONDA_ROOT="${CONDA_ROOT:-$USER_HOME/anaconda3}"
+CONDA_ENV_NAME="${CONDA_ENV_NAME:-seismic_env}"
 
 # 起始年份（用于全库合并）
 START_YEAR=2021
+
+export SEISDATA_BASE
 
 # =====================================================
 #               派生变量（勿改）

@@ -9,7 +9,7 @@ def get_subfolder_names(year):
     :param year: 指定的年份（如 2024）
     :return: (命令字符串列表, 年份后两位字符串)
     """
-    base_path = f"/mnt/mseedindex_share/seisdata/{year}"
+    base_path = os.path.join(os.environ.get("SEISDATA_BASE", "/data/seisdata"), str(year))  # 数据根目录由环境变量 SEISDATA_BASE 指定
     year_suffix = str(year)[-2:]  # 获取年份后两位
 
     # 获取 base_path 下的所有子文件夹名称

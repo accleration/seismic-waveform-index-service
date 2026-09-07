@@ -10,6 +10,18 @@ fi
 start_year=$1
 end_year=$2
 
+# ==================== 用户可配置区（可用环境变量覆盖） ====================
+SEISDATA_BASE="${SEISDATA_BASE:-/data/seisdata}"                                  # miniSEED 数据根目录，下含 <year>/<province>/...
+INDEX_PROJECT_DIR="${INDEX_PROJECT_DIR:-$HOME/project/seismic-waveform-index}"      # 本脚本运行目录（生成年份 sqlite 与 All_Merged.sqlite）
+MSEEDINDEX_BIN="${MSEEDINDEX_BIN:-$HOME/project/mseedindex-main/mseedindex}"        # mseedindex 可执行文件
+FDSNWS_CONFIG="${FDSNWS_CONFIG:-$HOME/project/fdsnws_dataselect/server.ini}"        # fdsnws_dataselect 服务配置文件
+CONDA_ROOT="${CONDA_ROOT:-$HOME/anaconda3}"                                         # Conda 根目录
+CONDA_ENV_NAME="${CONDA_ENV_NAME:-seismic_env}"                                     # Conda 环境名
+CONDA_ENV_BIN="${CONDA_ROOT}/envs/${CONDA_ENV_NAME}/bin"                            # Conda 环境 bin 目录
+FINAL_SQLITE_PATH="${FINAL_SQLITE_PATH:-${INDEX_PROJECT_DIR}/All_Merged.sqlite}"    # 最终全量索引库路径
+export SEISDATA_BASE
+# =============================================================================
+
 for (( year=$start_year; year<=$end_year; year++ ))
 do
     echo "正在处理年份: $year"
@@ -51,7 +63,7 @@ do
         # 生成 shell 执行语句（同步版本）
         for file in inputfile_list_*_"$year_suffix"; do
             province=$(echo "$file" | sed -E "s/inputfile_list_(.*)_${year_suffix}/\1/")
-            echo "~/project/mseedindex-main/mseedindex -snd -sqlite ${year}_${province}_All.sqlite @$file > ./log/output_${province}_${year_suffix}.log 2>&1" >> "auto_mseedindex_shell_${year}"
+            echo "${MSEEDINDEX_BIN} -snd -sqlite ${year}_${province}_All.sqlite @$file > ./log/output_${province}_${year_suffix}.log 2>&1" >> "auto_mseedindex_shell_${year}"
         done
 
         chmod +x "auto_mseedindex_shell_${year}"
@@ -107,9 +119,7 @@ echo "所有年度数据库已合并为 All_Merged.sqlite"
 # 可选：清理中间目录
 rm -r ./all_years_sqlite_temp
 
-# 修改fdsnws_dataselect程序的配置文件
-CONFIG_FILE="/home/ubuntu/project/fdsnws_dataselect/server.ini"
-FINAL_SQLITE_PATH="/home/ubuntu/project/exp-mseedindex-main/All_Merged.sqlite"
+# 修改 fdsnws_dataselect 程序的配置文件（CONFIG_FILE / FINAL_SQLITE_PATH 已在文件顶部配置区定义）
 
 if [ -f "$CONFIG_FILE" ]; then
     echo "正在更新 server.ini 中 [index_db] 段的 path 配置为：$FINAL_SQLITE_PATH"
@@ -136,16 +146,13 @@ fi
 # 运行fdsnws_dataselect程序
 echo "准备启动 FDSNWS 数据服务..."
 
-# Conda 环境名
-CONDA_ENV_NAME="ispaq"
-
 # 切换 Conda 环境并进入可执行目录（注意使用 bash -c 保证环境激活）
-source ~/anaconda3/etc/profile.d/conda.sh
+source "${CONDA_ROOT}/etc/profile.d/conda.sh"
 conda activate "$CONDA_ENV_NAME"
 
 # 切换到程序目录并启动服务
-cd ~/anaconda3/envs/ispaq/bin || {
-    echo "无法进入可执行目录 ~/anaconda3/envs/ispaq/bin"
+cd "${CONDA_ENV_BIN}" || {
+    echo "无法进入可执行目录 ${CONDA_ENV_BIN}"
     exit 1
 }
 
@@ -163,7 +170,7 @@ fi
 
 # 启动服务
 echo "启动 portable-fdsnws-dataselect 服务..."
-nohup ./portable-fdsnws-dataselect ~/project/fdsnws_dataselect/server.ini > server.log 2>&1 &
+nohup ./portable-fdsnws-dataselect "$FDSNWS_CONFIG" > server.log 2>&1 &
 
 echo "FDSNWS 服务已后台运行，日志输出：server.log"
 
