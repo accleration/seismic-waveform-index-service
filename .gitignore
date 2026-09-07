@@ -1,0 +1,15 @@
+# runtime / data artifacts
+*.sqlite
+*.sqlite-journal
+*.log
+inputfile_list*
+auto_mseedindex_shell_*
+server.ini
+server_daily.ini
+stamps/
+log/
+logs/
+
+# python
+__pycache__/
+*.py[cod]
